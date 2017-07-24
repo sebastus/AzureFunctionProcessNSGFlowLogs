@@ -1,12 +1,20 @@
 {
+  "disabled": false,
   "bindings": [
     {
       "name": "myBlob",
       "type": "blobTrigger",
       "direction": "inout",
-      "path": "insights-logs-networksecuritygroupflowevent/{name}",
-      "connection": "splunktelemetryaf8f_STORAGE"
+      "path": "insights-logs-networksecuritygroupflowevent/resourceId=/SUBSCRIPTIONS/{subId}/RESOURCEGROUPS/{resourceGroup}/PROVIDERS/MICROSOFT.NETWORK/NETWORKSECURITYGROUPS/{nsgName}/y={blobYear}/m={blobMonth}/d={blobDay}/h={blobHour}/m={blobMinute}/PT1H.json",
+      "connection": "nsgaccount"
+    },
+    {
+      "name": "checkpointTable",
+      "type": "table",
+      "tableName": "checkpoints",
+      "connection": "nsgaccount",
+      "direction": "in"
     }
-  ],
-  "disabled": false
+
+  ]
 }
