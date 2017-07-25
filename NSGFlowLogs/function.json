@@ -4,7 +4,7 @@
     {
       "name": "myBlob",
       "type": "blobTrigger",
-      "direction": "inout",
+      "direction": "in",
       "path": "insights-logs-networksecuritygroupflowevent/resourceId=/SUBSCRIPTIONS/{subId}/RESOURCEGROUPS/{resourceGroup}/PROVIDERS/MICROSOFT.NETWORK/NETWORKSECURITYGROUPS/{nsgName}/y={blobYear}/m={blobMonth}/d={blobDay}/h={blobHour}/m={blobMinute}/PT1H.json",
       "connection": "nsgaccount"
     },
@@ -13,8 +13,14 @@
       "type": "table",
       "tableName": "checkpoints",
       "connection": "nsgaccount",
-      "direction": "in"
+      "direction": "inout"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "outputChunks",
+      "queueName": "nsgprocessing",
+      "connection": "AzureWebJobsStorage"
     }
-
   ]
 }

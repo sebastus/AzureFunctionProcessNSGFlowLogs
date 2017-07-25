@@ -10,7 +10,7 @@ using System.Threading;
 
 const int MAXDOWNLOADBYTES = 10240;
 
-public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, TraceWriter log)
+public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, TraceWriter log)
 {
     var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour);
 
@@ -81,7 +81,12 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
             if (tieOffChunk)
             {
                 // chunk complete, add it to the list & reset counters
-                chunks.Add(new Chunk { Length = currentChunkSize, LastBlockName = currentChunkLastBlockName, Start = currentStartingByteOffset });
+                chunks.Add(new Chunk {
+                    Length = currentChunkSize,
+                    LastBlockName = currentChunkLastBlockName,
+                    Start = currentStartingByteOffset,
+                    BlobAccountConnectionName = "AzureWebJobsStorage"
+                });
                 currentStartingByteOffset += currentChunkSize; // the next chunk starts at this offset
                 currentChunkSize = 0;
                 tieOffChunk = false;
@@ -94,6 +99,7 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
         }
     }
 
+    // debug logging
     msg = string.Format("Chunks to download & transmit: {0}", chunks.Count);
     log.Info(msg);
     foreach (var chunk in chunks)
@@ -107,6 +113,13 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
     {
         var lastChunk = chunks[chunks.Count - 1];
         PutCheckpoint(blobName, checkpointTable, lastChunk.LastBlockName, lastChunk.Start + lastChunk.Length, log);
+    }
+
+    // add the chunks to output queue
+    // they are sent automatically by Functions configuration
+    foreach (var chunk in chunks)
+    {
+        outputChunks.Add(chunk);
     }
 }
 
@@ -215,6 +228,7 @@ public class Checkpoint : TableEntity, IDisposable
 
 public class Chunk
 {
+    public string BlobAccountConnectionName { get; set; }
     public long Length { get; set; }
     public long Start { get; set; }
     public string LastBlockName { get; set; }
