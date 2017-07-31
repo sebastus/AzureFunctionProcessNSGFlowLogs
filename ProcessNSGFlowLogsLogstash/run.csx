@@ -26,22 +26,19 @@ public static async Task Run(Chunk inputChunk, Binder binder, TraceWriter log)
         new StorageAccountAttribute(nsgSourceDataAccount)
     };
 
-    byte[] nsgMessages = new byte[inputChunk.Length];
-    CloudBlockBlob blob;
+    string nsgMessagesString;
     try
     {
-        blob = await binder.BindAsync<CloudBlockBlob>(attributes);
-    } 
+        byte[] nsgMessages = new byte[inputChunk.Length];
+        CloudBlockBlob blob = await binder.BindAsync<CloudBlockBlob>(attributes);
+        await blob.DownloadRangeToByteArrayAsync(nsgMessages, 0, inputChunk.Start, inputChunk.Length);
+        nsgMessagesString = System.Text.Encoding.UTF8.GetString(nsgMessages);
+    }
     catch (Exception ex)
     {
         log.Error(string.Format("Error binding blob input: {0}", ex.Message));
         return;
     }
-
-    // the data coming from blob looks like {...},{...},{...}
-    await blob.DownloadRangeToByteArrayAsync(nsgMessages, 0, inputChunk.Start, inputChunk.Length);
-
-    string nsgMessagesString = System.Text.Encoding.UTF8.GetString(nsgMessages);
 
     await SendMessagesDownstream(nsgMessagesString, log);
 }
