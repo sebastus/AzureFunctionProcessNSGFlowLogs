@@ -1,4 +1,6 @@
-// Blob trigger binding to a CloudBlockBlob
+#load "../shared/getEnvironmentVariable.csx"
+#load "../shared/chunk.csx"
+
 #r "Microsoft.WindowsAzure.Storage"
 
 using System;
@@ -14,6 +16,20 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
 {
     var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour);
 
+    string nsgSourceDataAccount = getEnvironmentVariable("nsgSourceDataAccount");
+    if (nsgSourceDataAccount.Length == 0)
+    {
+        log.Error("Value for nsgSourceDataAccount is required.");
+        return;
+    }
+
+    string blobContainerName = getEnvironmentVariable("blobContainerName");
+    if (blobContainerName.Length == 0)
+    {
+        log.Error("Value for blobContainerName is required.");
+        return;
+    }
+
     // get checkpoint
     Checkpoint checkpoint = await GetCheckpoint(blobName, checkpointTable, log);
 
@@ -26,16 +42,10 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
     bool firstBlockItem = true;
     bool foundStartingOffset = false;
     bool tieOffChunk = false;
-    string msg = string.Format("Current checkpoint last block name: {0}", checkpoint.LastBlockName);
-    log.Info(msg);
+    //string msg = string.Format("Current checkpoint last block name: {0}", checkpoint.LastBlockName);
+    //log.Info(msg);
     foreach (var blockListItem in myBlob.DownloadBlockList(BlockListingFilter.Committed))
     {
-        msg = string.Format("Block name: {0}, length: {1}", blockListItem.Name, blockListItem.Length);
-        log.Info(msg);
-
-        // skip first block, but add to the offset
-        // find the starting block based on checkpoint LastBlockName
-        // if it's empty, start at the beginning
         if (!foundStartingOffset)
         {
             if (firstBlockItem)
@@ -58,34 +68,16 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
         }
         else
         {
-            // tieOffChunk = add current chunk to the list, initialize next chunk counters
-            // conditions to account for:
-            // 1) current chunk is empty & not the last block (size = 9)
-            //   a) add blockListItem to current chunk
-            //   b) loop
-            // 2) current chunk is empty & last block (size = 9)
-            //   a) do not add blockListItem to current chunk
-            //   b) loop terminates
-            //   c) chunk last added to the list is the last chunk
-            // 3) current chunk is not empty & not the last block
-            //   a) if size of block + size of chunk >10k
-            //     i) add chunk to list  <-- tieOffChunk
-            //     ii) reset chunk counters
-            //   b) add blockListItem to chunk
-            //   c) loop
-            // 4) current chunk is not empty & last block
-            //   a) add chunk to list  <-- tieOffChunk
-            //   b) do not add blockListItem to chunk
-            //   c) loop terminates
             tieOffChunk = ((blockListItem.Length == 9) && (currentChunkSize != 0)) || (currentChunkSize + blockListItem.Length > MAXDOWNLOADBYTES);            
             if (tieOffChunk)
             {
                 // chunk complete, add it to the list & reset counters
                 chunks.Add(new Chunk {
+                    BlobName = blobContainerName + "/" + myBlob.Name,
                     Length = currentChunkSize,
                     LastBlockName = currentChunkLastBlockName,
                     Start = currentStartingByteOffset,
-                    BlobAccountConnectionName = "AzureWebJobsStorage"
+                    BlobAccountConnectionName = nsgSourceDataAccount
                 });
                 currentStartingByteOffset += currentChunkSize; // the next chunk starts at this offset
                 currentChunkSize = 0;
@@ -99,20 +91,11 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
         }
     }
 
-    // debug logging
-    msg = string.Format("Chunks to download & transmit: {0}", chunks.Count);
-    log.Info(msg);
-    foreach (var chunk in chunks)
-    {
-        msg = string.Format("Starting byte offset: {0}, size of chunk: {1}, name of last block: {2}", chunk.Start, chunk.Length, chunk.LastBlockName);
-        log.Info(msg);
-    }
-
     // update the checkpoint
     if (chunks.Count > 0)
     {
         var lastChunk = chunks[chunks.Count - 1];
-        PutCheckpoint(blobName, checkpointTable, lastChunk.LastBlockName, lastChunk.Start + lastChunk.Length, log);
+        await PutCheckpoint(blobName, checkpointTable, lastChunk.LastBlockName, lastChunk.Start + lastChunk.Length, log);
     }
 
     // add the chunks to output queue
@@ -225,12 +208,3 @@ public class Checkpoint : TableEntity, IDisposable
         disposed = true;
     }
 }
-
-public class Chunk
-{
-    public string BlobAccountConnectionName { get; set; }
-    public long Length { get; set; }
-    public long Start { get; set; }
-    public string LastBlockName { get; set; }
-}
-

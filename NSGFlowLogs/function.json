@@ -6,13 +6,13 @@
       "type": "blobTrigger",
       "direction": "in",
       "path": "insights-logs-networksecuritygroupflowevent/resourceId=/SUBSCRIPTIONS/{subId}/RESOURCEGROUPS/{resourceGroup}/PROVIDERS/MICROSOFT.NETWORK/NETWORKSECURITYGROUPS/{nsgName}/y={blobYear}/m={blobMonth}/d={blobDay}/h={blobHour}/m={blobMinute}/PT1H.json",
-      "connection": "nsgaccount"
+      "connection": "elkstack"
     },
     {
       "name": "checkpointTable",
       "type": "table",
       "tableName": "checkpoints",
-      "connection": "nsgaccount",
+      "connection": "elkstack",
       "direction": "inout"
     },
     {
