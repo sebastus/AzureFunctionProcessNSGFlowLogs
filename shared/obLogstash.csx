@@ -40,8 +40,10 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
 
     log.Info(string.Format("standardizedEvents as byte[]: {0}", standardizedEvents.ToCharArray()));
 
+    // skip past the leading comma
+    int comma = standardizedEvents.IndexOf(',');
     string newClientContent = "{\"records\":[";
-    newClientContent += standardizedEvents;
+    newClientContent += standardizedEvents.Substring(comma+1);
     newClientContent += "]}";
 
     var client = new SingleHttpClientInstance();
