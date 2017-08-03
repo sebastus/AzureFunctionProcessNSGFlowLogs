@@ -28,7 +28,7 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
 {
     string logstashAddress = getEnvironmentVariable("logstashAddress");
     if (logstashAddress.Length == 0){
-        log.Error("Values for logstashAddress is required.");
+        log.Error("Value for logstashAddress is required.");
         return;
     }
 
@@ -38,9 +38,10 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
     new System.Net.Security.RemoteCertificateValidationCallback(
         delegate { return true; });
 
-    string trimmed = standardizedEvents.Substring(1);
+    log.Error(string.Format("standardizedEvents as byte[]: {0}", standardizedEvents.ToCharArray()));
+
     string newClientContent = "{\"records\":[";
-    newClientContent += trimmed;
+    newClientContent += standardizedEvents;
     newClientContent += "]}";
 
     var client = new SingleHttpClientInstance();
