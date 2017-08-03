@@ -38,8 +38,9 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
     new System.Net.Security.RemoteCertificateValidationCallback(
         delegate { return true; });
 
+    string trimmed = standardizedEvents.Substring(1);
     string newClientContent = "{\"records\":[";
-    newClientContent += standardizedEvents;
+    newClientContent += trimmed;
     newClientContent += "]}";
 
     var client = new SingleHttpClientInstance();
