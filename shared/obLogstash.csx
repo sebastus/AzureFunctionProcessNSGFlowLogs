@@ -38,8 +38,6 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
     new System.Net.Security.RemoteCertificateValidationCallback(
         delegate { return true; });
 
-    log.Info(string.Format("standardizedEvents as byte[]: {0}", standardizedEvents.ToCharArray()));
-
     // skip past the leading comma
     int comma = standardizedEvents.IndexOf(',');
     string newClientContent = "{\"records\":[";
@@ -52,7 +50,7 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
         HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Post, logstashAddress);
         req.Headers.Accept.Clear();
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        req.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes(string.Format("{0}:{1}", "greg", "PepperSalam8"))));
+        req.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes(string.Format("{0}:{1}", "greg", "P@ssw0rd!"))));
         req.Content = new StringContent(newClientContent, Encoding.UTF8, "application/json");
         HttpResponseMessage response = await SingleHttpClientInstance.SendToLogstash(req);
         if (response.StatusCode != HttpStatusCode.OK)
