@@ -75,7 +75,7 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
         {
             msg += " *** " + f.InnerException.Message;
         }
-        log.Error($"Unknown error: \"{msg}\" was caught while sending to Logstash.");
+        log.Error($"Unknown error caught while sending to Logstash: \"{f}\"");
         throw f;
     }
 }
