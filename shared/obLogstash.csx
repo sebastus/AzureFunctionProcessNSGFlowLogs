@@ -28,7 +28,7 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
 {
     string logstashAddress = getEnvironmentVariable("logstashAddress");
     if (logstashAddress.Length == 0){
-        log.Error("Value for logstashAddress is required.");
+        log.Error("Values for logstashAddress is required.");
         return;
     }
 
@@ -60,10 +60,22 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
     }
     catch (System.Net.Http.HttpRequestException e)
     {
-        log.Error($"Error: \"{e.InnerException.Message}\" was caught while sending to Logstash.");
+        string msg = e.Message;
+        if (e.InnerException != null)
+        {
+            msg += " *** " + e.InnerException.Message;
+        }
+        log.Error($"HttpRequestException Error: \"{msg}\" was caught while sending to Logstash.");
+        throw e;
     }
     catch (Exception f)
     {
-        log.Error($"Error \"{f.InnerException.Message}\" was caught while sending to Logstash. Unplanned exception.");
+        string msg = f.Message;
+        if (f.InnerException != null)
+        {
+            msg += " *** " + f.InnerException.Message;
+        }
+        log.Error($"Unknown error: \"{msg}\" was caught while sending to Logstash.");
+        throw f;
     }
 }
