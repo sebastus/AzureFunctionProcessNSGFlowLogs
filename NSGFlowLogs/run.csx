@@ -12,9 +12,9 @@ using System.Threading;
 
 const int MAXDOWNLOADBYTES = 10240;
 
-public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, TraceWriter log)
+public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, string mac, TraceWriter log)
 {
-    var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour);
+    var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour, mac);
 
     string nsgSourceDataAccount = getEnvironmentVariable("nsgSourceDataAccount");
     if (nsgSourceDataAccount.Length == 0)
@@ -151,8 +151,9 @@ public class BlobName
     public string Month { get; set; }
     public string Day { get; set; }
     public string Hour { get; set; }
+    public string Mac {get; set;}
 
-    public BlobName(string subscriptionId, string resourceGroupName, string nsgName, string year, string month, string day, string hour)
+    public BlobName(string subscriptionId, string resourceGroupName, string nsgName, string year, string month, string day, string hour, string mac)
     {
         SubscriptionId = subscriptionId;
         ResourceGroupName = resourceGroupName;
@@ -161,11 +162,12 @@ public class BlobName
         Month = month;
         Day = day;
         Hour = hour;
+        Mac = mac;
     }
 
     public string GetPartitionKey()
     {
-        return string.Format("{0}_{1}_{2}_{3}_{4}", SubscriptionId.Replace("-", "_"), ResourceGroupName, NsgName, Year, Month);
+        return string.Format("{0}_{1}_{2}_{3}_{4}_{5}", SubscriptionId.Replace("-", "_"), ResourceGroupName, NsgName, Year, Month, Mac);
     }
 
     public string GetRowKey()
