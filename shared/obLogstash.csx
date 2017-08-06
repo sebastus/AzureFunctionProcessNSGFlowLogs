@@ -19,16 +19,32 @@ public class SingleHttpClientInstance
 
     public static async Task<HttpResponseMessage> SendToLogstash(HttpRequestMessage req)
     {
-        HttpResponseMessage response = await HttpClient.SendAsync(req);
+        HttpResponseMessage response = null;
+
+        try
+        {
+            response = await HttpClient.SendAsync(req);
+        } catch (TaskCanceledException ex)
+        {
+            throw ex;
+        } catch (Exception ex)
+        {
+            throw ex;
+        }
+   
         return response;
     }
 }
 
-static async Task obLogstash(string standardizedEvents, TraceWriter log)
+static async Task obLogstash(string newClientContent, TraceWriter log)
 {
     string logstashAddress = getEnvironmentVariable("logstashAddress");
-    if (logstashAddress.Length == 0){
-        log.Error("Values for logstashAddress is required.");
+    string logstashHttpUser = getEnvironmentVariable("logstashHttpUser");
+    string logstashHttpPwd = getEnvironmentVariable("logstashHttpPwd");
+
+    if (logstashAddress.Length == 0 || logstashHttpUser.Length == 0 || logstashHttpPwd.Length == 0)
+    {
+        log.Error("Values for logstashAddress, logstashHttpUser and logstashHttpPwd are required.");
         return;
     }
 
@@ -38,19 +54,14 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
     new System.Net.Security.RemoteCertificateValidationCallback(
         delegate { return true; });
 
-    // skip past the leading comma
-    int comma = standardizedEvents.IndexOf(',');
-    string newClientContent = "{\"records\":[";
-    newClientContent += standardizedEvents.Substring(comma+1);
-    newClientContent += "]}";
-
     var client = new SingleHttpClientInstance();
+    var creds = Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes(string.Format("{0}:{1}", logstashHttpUser, logstashHttpPwd)));
     try
     {
         HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Post, logstashAddress);
         req.Headers.Accept.Clear();
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        req.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes(string.Format("{0}:{1}", "greg", "P@ssw0rd!"))));
+        req.Headers.Add("Authorization", "Basic " + creds);
         req.Content = new StringContent(newClientContent, Encoding.UTF8, "application/json");
         HttpResponseMessage response = await SingleHttpClientInstance.SendToLogstash(req);
         if (response.StatusCode != HttpStatusCode.OK)
@@ -75,7 +86,7 @@ static async Task obLogstash(string standardizedEvents, TraceWriter log)
         {
             msg += " *** " + f.InnerException.Message;
         }
-        log.Error($"Unknown error caught while sending to Logstash: \"{f}\"");
+        log.Error($"Unknown error caught while sending to Logstash: \"{f.ToString()}\"");
         throw f;
     }
 }

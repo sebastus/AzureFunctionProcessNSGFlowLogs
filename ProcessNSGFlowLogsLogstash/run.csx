@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host.Bindings.Runtime;
 using Microsoft.WindowsAzure.Storage.Blob;
 
-public static async Task Run(Chunk inputChunk, Binder binder, TraceWriter log)
+public static async Task Run(Chunk inputChunk, Binder binder, Binder logTransmissions, TraceWriter log)
 {
     log.Info($"C# Queue trigger function processed: {inputChunk}");
 
@@ -17,7 +17,7 @@ public static async Task Run(Chunk inputChunk, Binder binder, TraceWriter log)
     if (nsgSourceDataAccount.Length == 0)
     {
         log.Error("Value for nsgSourceDataAccount is required.");
-        return;
+        throw new ArgumentNullException("nsgSourceDataAccount", "Please supply in this setting the name of the connection string from which NSG logs should be read.");
     }
 
     var attributes = new Attribute[]
@@ -37,9 +37,32 @@ public static async Task Run(Chunk inputChunk, Binder binder, TraceWriter log)
     catch (Exception ex)
     {
         log.Error(string.Format("Error binding blob input: {0}", ex.Message));
-        return;
+        throw ex;
     }
 
-    await SendMessagesDownstream(nsgMessagesString, log);
+    // skip past the leading comma
+    string trimmedMessages = nsgMessagesString.Trim();
+    int curlyBrace = trimmedMessages.IndexOf('{');
+    string newClientContent = "{\"records\":[";
+    newClientContent += trimmedMessages.Substring(curlyBrace);
+    newClientContent += "]}";
+
+    var attributesLog = new Attribute[]
+    {
+        new BlobAttribute("transmissions/" + inputChunk.LastBlockName + ".json"),
+        new StorageAccountAttribute("AzureWebJobsStorage")
+    };
+
+    try
+    {
+        TextWriter writer = await logTransmissions.BindAsync<TextWriter>(attributesLog);
+        await writer.WriteAsync(newClientContent);
+    } catch (Exception ex)
+    {
+        log.Error(string.Format("Error binding blob output: {0}", ex.Message));
+        throw ex;
+    }
+
+    await SendMessagesDownstream(newClientContent, log);
 }
 

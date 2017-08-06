@@ -13,6 +13,7 @@ using System.Threading;
 const int MAXDOWNLOADBYTES = 10240;
 
 public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, string mac, TraceWriter log)
+//public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, TraceWriter log)
 {
     var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour, mac);
 
@@ -31,7 +32,7 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
     }
 
     // get checkpoint
-    Checkpoint checkpoint = await GetCheckpoint(blobName, checkpointTable, log);
+    Checkpoint checkpoint = GetCheckpoint(blobName, checkpointTable, log);
 
     //// break up the block list into 10k chunks
     List<Chunk> chunks = new List<Chunk>();
@@ -42,10 +43,13 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
     bool firstBlockItem = true;
     bool foundStartingOffset = false;
     bool tieOffChunk = false;
-    //string msg = string.Format("Current checkpoint last block name: {0}", checkpoint.LastBlockName);
+    string msg;
+    //msg = string.Format("Current checkpoint last block name: {0}", checkpoint.LastBlockName);
     //log.Info(msg);
     foreach (var blockListItem in myBlob.DownloadBlockList(BlockListingFilter.Committed))
     {
+        //msg = string.Format("Block name: {0}, length: {1}", blockListItem.Name, blockListItem.Length);
+        //log.Info(msg);
         if (!foundStartingOffset)
         {
             if (firstBlockItem)
@@ -68,7 +72,7 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
         }
         else
         {
-            tieOffChunk = ((blockListItem.Length == 9) && (currentChunkSize != 0)) || (currentChunkSize + blockListItem.Length > MAXDOWNLOADBYTES);            
+            tieOffChunk = (currentChunkSize !=0) && ((blockListItem.Length < 10) || (currentChunkSize + blockListItem.Length > MAXDOWNLOADBYTES));
             if (tieOffChunk)
             {
                 // chunk complete, add it to the list & reset counters
@@ -83,7 +87,7 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
                 currentChunkSize = 0;
                 tieOffChunk = false;
             }
-            if (blockListItem.Length != 9)
+            if (blockListItem.Length > 10)
             {
                 currentChunkSize += blockListItem.Length;
                 currentChunkLastBlockName = blockListItem.Name;
@@ -91,11 +95,33 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
         }
     }
 
-    // update the checkpoint
+    if (currentChunkSize != 0)
+    {
+        // residual chunk
+        chunks.Add(new Chunk
+        {
+            BlobName = blobContainerName + "/" + myBlob.Name,
+            Length = currentChunkSize,
+            LastBlockName = currentChunkLastBlockName,
+            Start = currentStartingByteOffset,
+            BlobAccountConnectionName = nsgSourceDataAccount
+        });
+    }
+
+    // debug logging
+    //msg = string.Format("Chunks to download & transmit: {0}", chunks.Count);
+    //log.Info(msg);
+    //foreach (var chunk in chunks)
+    //{
+    //    msg = string.Format("Starting byte offset: {0}, size of chunk: {1}, name of last block: {2}", chunk.Start, chunk.Length, chunk.LastBlockName);
+    //    log.Info(msg);
+    //}
+
+ // update the checkpoint
     if (chunks.Count > 0)
     {
         var lastChunk = chunks[chunks.Count - 1];
-        await PutCheckpoint(blobName, checkpointTable, lastChunk.LastBlockName, lastChunk.Start + lastChunk.Length, log);
+        PutCheckpoint(blobName, checkpointTable, lastChunk.LastBlockName, lastChunk.Start + lastChunk.Length, log);
     }
 
     // add the chunks to output queue
@@ -103,10 +129,14 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
     foreach (var chunk in chunks)
     {
         outputChunks.Add(chunk);
+        if (chunk.Length == 0)
+        {
+            log.Info("chunk length is 0");
+        }
     }
 }
 
-public static async Task<Checkpoint> GetCheckpoint(BlobName blobName, CloudTable checkpointTable, TraceWriter log)
+public static Checkpoint GetCheckpoint(BlobName blobName, CloudTable checkpointTable, TraceWriter log)
 {
 
     var checkpointPartitionKey = blobName.GetPartitionKey();
@@ -134,7 +164,7 @@ public static async Task<Checkpoint> GetCheckpoint(BlobName blobName, CloudTable
 
 }
 
-public static async Task PutCheckpoint(BlobName blobName, CloudTable checkpointTable, string lastBlockName, long startingByteOffset, TraceWriter log)
+public static void PutCheckpoint(BlobName blobName, CloudTable checkpointTable, string lastBlockName, long startingByteOffset, TraceWriter log)
 {
     var newCheckpoint = new Checkpoint(
         blobName.GetPartitionKey(), blobName.GetRowKey(),
@@ -151,7 +181,7 @@ public class BlobName
     public string Month { get; set; }
     public string Day { get; set; }
     public string Hour { get; set; }
-    public string Mac {get; set;}
+    public string Mac { get; set; }
 
     public BlobName(string subscriptionId, string resourceGroupName, string nsgName, string year, string month, string day, string hour, string mac)
     {
@@ -163,6 +193,18 @@ public class BlobName
         Day = day;
         Hour = hour;
         Mac = mac;
+    }
+
+    public BlobName(string subscriptionId, string resourceGroupName, string nsgName, string year, string month, string day, string hour)
+    {
+        SubscriptionId = subscriptionId;
+        ResourceGroupName = resourceGroupName;
+        NsgName = nsgName;
+        Year = year;
+        Month = month;
+        Day = day;
+        Hour = hour;
+        Mac = "none";
     }
 
     public string GetPartitionKey()
