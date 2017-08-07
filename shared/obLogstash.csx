@@ -15,6 +15,7 @@ public class SingleHttpClientInstance
     static SingleHttpClientInstance()
     {
         HttpClient = new HttpClient();
+        HttpClient.Timeout = 60000;
     }
 
     public static async Task<HttpResponseMessage> SendToLogstash(HttpRequestMessage req)
