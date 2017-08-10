@@ -1,5 +1,5 @@
-var _ = require('../underscore');
-var azure = require('../azure-storage');
+//var _ = require('underscore');
+//var azure = require('azure-storage');
 
 module.exports = function(context) {
     // Additional inputs can be accessed by the arguments property
