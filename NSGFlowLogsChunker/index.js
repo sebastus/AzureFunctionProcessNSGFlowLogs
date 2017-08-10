@@ -16,7 +16,7 @@ module.exports = function(context) {
 
     var nsgSourceDataAccount = process.env.nsgSourceDataAccount;
     context.log('Data account is: ' + nsgSourceDataAccount);
-    
+
     var connStr = process.env[nsgSourceDataAccount];
     context.log('Connection string is: ' + connStr);
 
@@ -29,7 +29,7 @@ module.exports = function(context) {
 
         if (downloadErr !== null) {
 
-            context.log("error reading blob");
+            context.log("error reading blob: " + downloadErr);
 
         } else {
 
