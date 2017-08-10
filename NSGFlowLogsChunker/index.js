@@ -39,6 +39,7 @@ module.exports = function(context) {
 
             var records = '{"records":[' + blobText + ']}';
             var recordsJson = JSON.parse(records);
+            context.log('# of records is: ' + recordsJson.records.length);
 
             var outputQueueMessages = [];
             outputQueueMessages.push({BlobName: blobName, Start: start, Length: 0});
