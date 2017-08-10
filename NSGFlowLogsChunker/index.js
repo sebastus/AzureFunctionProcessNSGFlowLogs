@@ -10,27 +10,30 @@ module.exports = function(context) {
     var start = trigger.Start;
     var end = trigger.Length + start - 1;
 
-    //context.log('BlobName is: ' + blobName);
-    //context.log('Start is: ' + start);
-    //context.log('Length is: ' + trigger.Length);
+    context.log('BlobName is: ' + blobName);
+    context.log('Start is: ' + start);
+    context.log('Length is: ' + trigger.Length);
 
     var nsgSourceDataAccount = process.env.nsgSourceDataAccount;
-    //context.log('Data account is: ' + nsgSourceDataAccount);
+    context.log('Data account is: ' + nsgSourceDataAccount);
+    
     var connStr = process.env[nsgSourceDataAccount];
-    //context.log('Connection string is: ' + connStr);
+    context.log('Connection string is: ' + connStr);
 
     var blobService = azure.createBlobService(connStr).withFilter(new azure.ExponentialRetryPolicyFilter());
 
     var containerName = process.env.blobContainerName;
-    //context.log('containerName is: ' + containerName);
+    context.log('containerName is: ' + containerName);
 
     blobService.getBlobToText(containerName, blobName, {rangeStart:start, rangeEnd: end}, function (downloadErr, blobText, blob, downloadResponse) {
 
         if (downloadErr !== null) {
 
-            console.log("error reading blob");
+            context.log("error reading blob");
 
         } else {
+
+            context.log("read the blob");
 
             var curlyBrace = blobText.indexOf('{');
             if (curlyBrace !== 0) {
