@@ -47,6 +47,7 @@ module.exports = function(context) {
             _.each(recordsJson.record, function(record) {
 
                 recordLength = JSON.stringify(record).length;
+                context.log('recordLength is: ' + recordLength);
 
                 if (recordLength + outputQueueMessages[currentChunk].Length > MAX_CHUNK_SIZE) {
 
