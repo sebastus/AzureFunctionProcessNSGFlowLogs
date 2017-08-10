@@ -6,7 +6,10 @@ const MAX_CHUNK_SIZE = 100 * 1024;
 module.exports = function(context) {
 
     var trigger = context.bindings.inputBlock;
+    
     var blobName = trigger.BlobName;
+    blobName = blobName.substr(blobName.indexOf('/') + 1);
+
     var start = trigger.Start;
     var end = trigger.Length + start - 1;
 
