@@ -1,9 +1,6 @@
 var _ = require('underscore');
 var azure = require('azure-storage');
 
-var outputQueueMessages = [];
-var currentChunk = -1;
-
 const MAX_CHUNK_SIZE = 100 * 1024;
 
 module.exports = function(context) {
@@ -13,19 +10,19 @@ module.exports = function(context) {
     var start = trigger.Start;
     var end = trigger.Length + start - 1;
 
-    context.log('BlobName is: ' + blobName);
-    context.log('Start is: ' + start);
-    context.log('Length is: ' + trigger.Length);
+    //context.log('BlobName is: ' + blobName);
+    //context.log('Start is: ' + start);
+    //context.log('Length is: ' + trigger.Length);
 
     var nsgSourceDataAccount = process.env.nsgSourceDataAccount;
-    context.log('Data account is: ' + nsgSourceDataAccount);
+    //context.log('Data account is: ' + nsgSourceDataAccount);
     var connStr = process.env[nsgSourceDataAccount];
-    context.log('Connection string is: ' + connStr);
+    //context.log('Connection string is: ' + connStr);
 
     var blobService = azure.createBlobService(connStr).withFilter(new azure.ExponentialRetryPolicyFilter());
 
     var containerName = process.env.blobContainerName;
-    context.log('containerName is: ' + containerName);
+    //context.log('containerName is: ' + containerName);
 
     blobService.getBlobToText(containerName, blobName, {rangeStart:start, rangeEnd: end}, function (downloadErr, blobText, blob, downloadResponse) {
 
@@ -43,27 +40,31 @@ module.exports = function(context) {
             var records = '{"records":[' + blobText + ']}';
             var recordsJson = JSON.parse(records);
 
+            var outputQueueMessages = [];
             outputQueueMessages.push({BlobName: blobName, Start: start, Length: 0});
-            currentChunk = 0;
+            var currentChunk = 0;
 
-            _.each(recordsJson, makeChunks);
+            _.each(recordsJson, function(record) {
+
+                recordLength = JSON.stringify(record).length;
+
+                if (recordLength + outputQueueMessages[currentChunk].Length > MAX_CHUNK_SIZE) {
+
+                    newStart = outputQueueMessages[currentChunk].Start + outputQueueMessages[currentChunk].Length;
+
+                    outputQueueMessages.push({BlobName:blobName, Start:newStart, Length:0});
+
+                    context.log(JSON.stringify(outputQueueMessages[currentChunk]));
+
+                    currentChunk += 1;
+                }
+
+                outputQueueMessages[currentChunk].Length += recordLength;
+            });
+
             context.bindings.outputQueue = outputQueueMessages;
         }
         context.done();
     });
 
-};
-
-function makeChunks(record) {
-    
-    recordLength = JSON.stringify(record).length;
-
-    if (recordLength + outputQueueMessages[currentChunk].Length > MAX_CHUNK_SIZE) {
-        blobName = outputQueueMessages[currentChunk].BlobName;
-        newStart = outputQueueMessages[currentChunk].Start + outputQueueMessages[currentChunk].Length;
-        outputQueueMessages.push({BlobName:blobName, Start:newStart, Length:0});
-        currentChunk += 1;
-    }
-
-    outputQueueMessages[currentChunk].Length += recordLength;
 };
