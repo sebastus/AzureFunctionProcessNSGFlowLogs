@@ -1,0 +1,15 @@
+{
+  "name": "nsgflowlogs",
+  "version": "1.0.0",
+  "description": "process Azure Network Watcher NSG flow logs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Greg Oliver",
+  "dependencies": {
+      "azure-storage":"2.2.2",
+      "underscore":"1.8.3"
+  },
+  "license": "MIT"
+}
