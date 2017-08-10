@@ -12,12 +12,15 @@ module.exports = function(context) {
     context.log('Start is: ' + start);
     context.log('Length is: ' + trigger.Length);
 
-    var nsgSourceDataAccount = process.env['nsgSourceDataAccount'];
+    var nsgSourceDataAccount = process.env.nsgSourceDataAccount;
+    context.log('Data account is: ' + nsgSourceDataAccount);
     var connStr = process.env[nsgSourceDataAccount];
+    context.log('Connection string is: ' + connStr);
 
     var blobService = azure.createBlobService(connStr).withFilter(new azure.ExponentialRetryPolicyFilter());
 
-    var containerName = process.env['blobContainerName'];
+    var containerName = process.env.blobContainerName;
+    context.log('containerName is: ' + containerName);
 
     blobService.getBlobToText(containerName, blobName, {rangeStart:start, rangeEnd: end}, function (downloadErr, blobText, blob, downloadResponse) {
 
@@ -34,10 +37,9 @@ module.exports = function(context) {
 
             var records = '{"records":[' + blobText + ']}';
             var recordsJson = JSON.parse(records);
-
-
-            context.done();
+            
         }
+        context.done();
     });
 
 };
