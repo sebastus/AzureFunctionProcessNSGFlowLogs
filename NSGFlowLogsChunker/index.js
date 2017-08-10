@@ -44,7 +44,7 @@ module.exports = function(context) {
             outputQueueMessages.push({BlobName: blobName, Start: start, Length: 0});
             var currentChunk = 0;
 
-            _.each(recordsJson, function(record) {
+            _.each(recordsJson.record, function(record) {
 
                 recordLength = JSON.stringify(record).length;
 
