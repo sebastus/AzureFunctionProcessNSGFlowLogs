@@ -29,7 +29,10 @@ public static async Task Run(TimerInfo myTimer, Binder inputQueue, ICollector<Ch
         Chunk tmp = JsonConvert.DeserializeObject<Chunk>(message.AsString);
 
         log.Info($"BlobName: {tmp.BlobName}");
-        
+        log.Info($"LastBlockName: {tmp.LastBlockName}");
+        log.Info($"Start: {tmp.Start}");
+        log.Info($"Length: {tmp.Length}");
+
         outputQueue.Add(tmp);
 
         await queue.DeleteMessageAsync(message);
