@@ -17,6 +17,10 @@ public static async Task Run(Chunk inputChunk, Binder binder, ICollector<Chunk> 
 
     if (inputChunk.Length < MAX_CHUNK_SIZE)
     {
+        if (inputChunk.BlobName.Substring(1,8) == "resource") {
+            log.Info($"[xyz987] bad input chunk, blob name is: {inputChunk.BlobName}");
+            return;
+        }
         outputQueue.Add(inputChunk);
         return;
     }
@@ -61,7 +65,11 @@ public static async Task Run(Chunk inputChunk, Binder binder, ICollector<Chunk> 
         if (newChunk.Length + length > MAX_CHUNK_SIZE)
         {
             //log.Info($"Chunk starts at {newChunk.Start}, length is {newChunk.Length}, next start is {newChunk.Start + newChunk.Length}");
-            outputQueue.Add(newChunk);
+            if (newChunk.BlobName.Substring(1,8) == "resource") {
+                log.Info($"bad input chunk, blob name is: {newChunk.BlobName}");
+            } else {
+                outputQueue.Add(newChunk);
+            }
 
             newChunk = GetNewChunk(inputChunk, chunkCount++, newChunk.Start + newChunk.Length);
         }
@@ -75,20 +83,24 @@ public static async Task Run(Chunk inputChunk, Binder binder, ICollector<Chunk> 
 
     if (newChunk.Length > 0)
     {
-        outputQueue.Add(newChunk);
+        if (newChunk.BlobName.Substring(1,8) == "resource") {
+            log.Info($"[abc123] bad input chunk, blob name is: {inputChunk.BlobName}");
+        } else {
+            outputQueue.Add(newChunk);
+        }
         //log.Info($"Chunk starts at {newChunk.Start}, length is {newChunk.Length}");
     }
 
 }
 
-public static Chunk GetNewChunk(Chunk inputChunk, int index, long start = 0)
+public static Chunk GetNewChunk(Chunk thisChunk, int index, long start = 0)
 {
     var chunk = new Chunk
     {
-        BlobName = inputChunk.BlobName,
-        BlobAccountConnectionName = inputChunk.BlobAccountConnectionName,
-        LastBlockName = string.Format("{0}-{1}", index, inputChunk.LastBlockName),
-        Start = (start == 0? inputChunk.Start : start),
+        BlobName = thisChunk.BlobName,
+        BlobAccountConnectionName = thisChunk.BlobAccountConnectionName,
+        LastBlockName = string.Format("{0}-{1}", index, thisChunk.LastBlockName),
+        Start = (start == 0 ? thisChunk.Start : start),
         Length = 0
     };
     return chunk;
