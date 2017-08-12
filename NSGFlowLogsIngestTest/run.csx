@@ -27,6 +27,9 @@ public static async Task Run(TimerInfo myTimer, Binder inputQueue, ICollector<Ch
     foreach (var message in messages)
     {
         Chunk tmp = JsonConvert.DeserializeObject<Chunk>(message.AsString);
+
+        log.Info($"BlobName: {tmp.BlobName}");
+        
         outputQueue.Add(tmp);
 
         await queue.DeleteMessageAsync(message);
