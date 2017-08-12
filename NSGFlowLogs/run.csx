@@ -1,5 +1,7 @@
 #load "../shared/getEnvironmentVariable.csx"
 #load "../shared/chunk.csx"
+#load "../shared/blobname.csx"
+#load "../shared/checkpoint.csx"
 
 #r "Microsoft.WindowsAzure.Storage"
 
@@ -12,10 +14,12 @@ using System.Threading;
 
 const int MAXDOWNLOADBYTES = 10240;
 
-public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, string mac, TraceWriter log)
-//public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, TraceWriter log)
+//public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, string mac, TraceWriter log)
+public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, TraceWriter log)
 {
+    string mac = "none";
     var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour, mac);
+//    var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour);
 
     string nsgSourceDataAccount = getEnvironmentVariable("nsgSourceDataAccount");
     if (nsgSourceDataAccount.Length == 0)
@@ -30,6 +34,8 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
         log.Error("Value for blobContainerName is required.");
         return;
     }
+
+    //    add this to the binding in function.json:  /macAddress={mac}
 
     // get checkpoint
     Checkpoint checkpoint = GetCheckpoint(blobName, checkpointTable, log);
@@ -50,6 +56,10 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
     {
         //msg = string.Format("Block name: {0}, length: {1}", blockListItem.Name, blockListItem.Length);
         //log.Info(msg);
+
+        // skip first block, but add to the offset
+        // find the starting block based on checkpoint LastBlockName
+        // if it's empty, start at the beginning
         if (!foundStartingOffset)
         {
             if (firstBlockItem)
@@ -72,6 +82,25 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
         }
         else
         {
+            // tieOffChunk = add current chunk to the list, initialize next chunk counters
+            // conditions to account for:
+            // 1) current chunk is empty & not the last block (size > 10 I think)
+            //   a) add blockListItem to current chunk
+            //   b) loop
+            // 2) current chunk is empty & last block (size < 10 I think)
+            //   a) do not add blockListItem to current chunk
+            //   b) loop terminates
+            //   c) chunk last added to the list is the last chunk
+            // 3) current chunk is not empty & not the last block
+            //   a) if size of block + size of chunk >10k
+            //     i) add chunk to list  <-- tieOffChunk
+            //     ii) reset chunk counters
+            //   b) add blockListItem to chunk
+            //   c) loop
+            // 4) current chunk is not empty & last block
+            //   a) add chunk to list  <-- tieOffChunk
+            //   b) do not add blockListItem to chunk
+            //   c) loop terminates
             tieOffChunk = (currentChunkSize !=0) && ((blockListItem.Length < 10) || (currentChunkSize + blockListItem.Length > MAXDOWNLOADBYTES));
             if (tieOffChunk)
             {
@@ -94,7 +123,6 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
             }
         }
     }
-
     if (currentChunkSize != 0)
     {
         // residual chunk
@@ -117,7 +145,7 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
     //    log.Info(msg);
     //}
 
- // update the checkpoint
+    // update the checkpoint
     if (chunks.Count > 0)
     {
         var lastChunk = chunks[chunks.Count - 1];
@@ -136,119 +164,3 @@ public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, 
     }
 }
 
-public static Checkpoint GetCheckpoint(BlobName blobName, CloudTable checkpointTable, TraceWriter log)
-{
-
-    var checkpointPartitionKey = blobName.GetPartitionKey();
-    var checkpointRowKey = blobName.GetRowKey();
-
-    Checkpoint checkpoint = null;
-    try
-    {
-        TableOperation operation = TableOperation.Retrieve<Checkpoint>(checkpointPartitionKey, checkpointRowKey);
-        TableResult result = checkpointTable.Execute(operation);
-        checkpoint = (Checkpoint)result.Result;
-
-        if (checkpoint == null)
-        {
-            checkpoint = new Checkpoint(checkpointPartitionKey, checkpointRowKey, "", 0);
-        }
-    }
-    catch (Exception ex)
-    {
-        var msg = string.Format("Error fetching checkpoint for blob: {0}", ex.Message);
-        log.Info(msg);
-    }
-
-   return checkpoint;
-
-}
-
-public static void PutCheckpoint(BlobName blobName, CloudTable checkpointTable, string lastBlockName, long startingByteOffset, TraceWriter log)
-{
-    var newCheckpoint = new Checkpoint(
-        blobName.GetPartitionKey(), blobName.GetRowKey(),
-        lastBlockName, startingByteOffset);
-    TableOperation operation = TableOperation.InsertOrReplace(newCheckpoint);
-    checkpointTable.Execute(operation);
-}
-public class BlobName
-{
-    public string SubscriptionId { get; set; }
-    public string ResourceGroupName { get; set; }
-    public string NsgName { get; set; }
-    public string Year { get; set; }
-    public string Month { get; set; }
-    public string Day { get; set; }
-    public string Hour { get; set; }
-    public string Mac { get; set; }
-
-    public BlobName(string subscriptionId, string resourceGroupName, string nsgName, string year, string month, string day, string hour, string mac)
-    {
-        SubscriptionId = subscriptionId;
-        ResourceGroupName = resourceGroupName;
-        NsgName = nsgName;
-        Year = year;
-        Month = month;
-        Day = day;
-        Hour = hour;
-        Mac = mac;
-    }
-
-    public BlobName(string subscriptionId, string resourceGroupName, string nsgName, string year, string month, string day, string hour)
-    {
-        SubscriptionId = subscriptionId;
-        ResourceGroupName = resourceGroupName;
-        NsgName = nsgName;
-        Year = year;
-        Month = month;
-        Day = day;
-        Hour = hour;
-        Mac = "none";
-    }
-
-    public string GetPartitionKey()
-    {
-        return string.Format("{0}_{1}_{2}_{3}_{4}_{5}", SubscriptionId.Replace("-", "_"), ResourceGroupName, NsgName, Year, Month, Mac);
-    }
-
-    public string GetRowKey()
-    {
-        return string.Format("{0}_{1}", Day, Hour);
-    }
-}
-
-public class Checkpoint : TableEntity, IDisposable
-{
-    public Checkpoint() { }
-
-    public Checkpoint(string partitionKey, string rowKey, string blockName, long offset)
-    {
-        PartitionKey = partitionKey;
-        RowKey = rowKey;
-        LastBlockName = blockName;
-        StartingByteOffset = offset;
-    }
-
-    public string LastBlockName { get; set; }
-    public long StartingByteOffset { get; set; }
-
-    bool disposed = false;
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (disposed)
-            return;
-
-        if (disposing)
-        {
-        }
-
-        disposed = true;
-    }
-}

@@ -11,7 +11,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 public static async Task Run(Chunk inputChunk, Binder binder, Binder logTransmissions, TraceWriter log)
 {
-    log.Info($"C# Queue trigger function processed: {inputChunk}");
+    log.Info($"C# NSG Flow Logs Logstash (Queue trigger) function processed: {inputChunk}");
 
     string nsgSourceDataAccount = getEnvironmentVariable("nsgSourceDataAccount");
     if (nsgSourceDataAccount.Length == 0)

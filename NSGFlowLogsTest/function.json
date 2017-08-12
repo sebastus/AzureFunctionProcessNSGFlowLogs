@@ -1,0 +1,18 @@
+﻿{
+  "disabled": false,
+  "bindings": [
+    {
+      "name": "myTimer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0/30 * * * * *"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "outputQueue",
+      "queueName": "nsgchunktest",
+      "connection": "AzureWebJobsStorage"
+    }
+  ]
+}
