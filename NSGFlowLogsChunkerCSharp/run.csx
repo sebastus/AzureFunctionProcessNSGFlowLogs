@@ -53,7 +53,7 @@ public static async Task Run(Chunk inputChunk, Binder binder, ICollector<Chunk> 
     int startingByte = 0;
     var chunkCount = 0;
 
-    var newChunk = GetNewChunk(inputChunk, chunkCount++, 0, log);
+    var newChunk = GetNewChunk(inputChunk, chunkCount++, log, 0);
 
     //long length = FindNextRecord(nsgMessages, startingByte);
     var nsgMessagesString = System.Text.Encoding.Default.GetString(nsgMessages);
@@ -71,7 +71,7 @@ public static async Task Run(Chunk inputChunk, Binder binder, ICollector<Chunk> 
                 outputQueue.Add(newChunk);
             }
 
-            newChunk = GetNewChunk(inputChunk, chunkCount++, newChunk.Start + newChunk.Length, log);
+            newChunk = GetNewChunk(inputChunk, chunkCount++, log, newChunk.Start + newChunk.Length);
         }
 
         newChunk.Length += length;
@@ -93,7 +93,7 @@ public static async Task Run(Chunk inputChunk, Binder binder, ICollector<Chunk> 
 
 }
 
-public static Chunk GetNewChunk(Chunk thisChunk, int index, long start = 0, TraceWriter log)
+public static Chunk GetNewChunk(Chunk thisChunk, int index, TraceWriter log, long start = 0)
 {
     var chunk = new Chunk
     {
@@ -105,7 +105,7 @@ public static Chunk GetNewChunk(Chunk thisChunk, int index, long start = 0, Trac
     };
 
     log.Info($"new chunk: {chunk.ToString()}");
-    
+
     return chunk;
 }
 
