@@ -18,21 +18,27 @@ public class SingleHttpClientInstance
         HttpClient.Timeout = new TimeSpan(0, 1, 0);
     }
 
-    public static async Task<HttpResponseMessage> SendToLogstash(HttpRequestMessage req)
+    public static async Task<HttpResponseMessage> SendToLogstash(HttpRequestMessage req, TraceWriter log)
     {
         HttpResponseMessage response = null;
 
         try
         {
             response = await HttpClient.SendAsync(req);
+        } catch (AggregateException ex)
+        {
+            log.Error("Got AggregateException.");
+            throw ex;
         } catch (TaskCanceledException ex)
         {
-            throw ex;
-        } catch (Exception ex)
-        {
+            log.Error("Got TaskCanceledException.");
             throw ex;
         }
-   
+        catch (Exception ex)
+        {
+            log.Error("Got other exceptoin.");
+            throw ex;
+        }
         return response;
     }
 }
@@ -64,7 +70,7 @@ static async Task obLogstash(string newClientContent, TraceWriter log)
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         req.Headers.Add("Authorization", "Basic " + creds);
         req.Content = new StringContent(newClientContent, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await SingleHttpClientInstance.SendToLogstash(req);
+        HttpResponseMessage response = await SingleHttpClientInstance.SendToLogstash(req, log);
         if (response.StatusCode != HttpStatusCode.OK)
         {
             log.Error($"StatusCode from Logstash: {response.StatusCode}, and reason: {response.ReasonPhrase}");
