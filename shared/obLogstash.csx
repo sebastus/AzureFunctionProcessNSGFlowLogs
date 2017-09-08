@@ -22,7 +22,7 @@ public class SingleHttpClientInstance
     {
         HttpResponseMessage response = null;
         var httpClient = new HttpClient();
-        httpClient.Timeout = TimeSpan.FromMinutes(1);
+        httpClient.Timeout = TimeSpan.FromMinutes(5);
         try
         {
             response = await httpClient.SendAsync(req);
