@@ -21,10 +21,11 @@ public class SingleHttpClientInstance
     public static async Task<HttpResponseMessage> SendToLogstash(HttpRequestMessage req, TraceWriter log)
     {
         HttpResponseMessage response = null;
-
+        var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromMinutes(1);
         try
         {
-            response = await HttpClient.SendAsync(req);
+            response = await httpClient.SendAsync(req);
         } catch (AggregateException ex)
         {
             log.Error("Got AggregateException.");
@@ -36,7 +37,7 @@ public class SingleHttpClientInstance
         }
         catch (Exception ex)
         {
-            log.Error("Got other exceptoin.");
+            log.Error("Got other exception.");
             throw ex;
         }
         return response;
