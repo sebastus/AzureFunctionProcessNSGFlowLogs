@@ -62,6 +62,8 @@ static async Task obLogstash(string newClientContent, TraceWriter log)
     new System.Net.Security.RemoteCertificateValidationCallback(
         delegate { return true; });
 
+    log.Info($"newClientContent: {newClientContent}");
+
     var client = new SingleHttpClientInstance();
     var creds = Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes(string.Format("{0}:{1}", logstashHttpUser, logstashHttpPwd)));
     try
