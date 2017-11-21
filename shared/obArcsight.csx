@@ -18,7 +18,7 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
         return;
     }
 
-    TcpClient client = new TcpClient(Convert.ToInt32(arcsightAddress), Convert.ToInt32(arcsightPort));
+    TcpClient client = new TcpClient(arcsightAddress, Convert.ToInt32(arcsightPort));
 
     foreach (var message in convertToCEF(newClientContent)) {
         TcpSend(client, message, log);
