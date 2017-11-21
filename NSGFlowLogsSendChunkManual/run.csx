@@ -11,6 +11,6 @@ public static async Task Run(string inputManualMessage, string newClientContent,
     log.Info($"C# NSG Flow Logs Manual (Queue trigger) function processed: {inputManualMessage}, length of blob is {newClientContent.Length}");
 
 
-//    await SendMessagesDownstream(newClientContent, log);
+    await SendMessagesDownstream(newClientContent, log);
 }
 
