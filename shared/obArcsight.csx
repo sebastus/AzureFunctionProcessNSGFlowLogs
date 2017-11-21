@@ -23,10 +23,16 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
 
     int count = 5;
     foreach (var message in convertToCEF(newClientContent, log)) {
+
+        log.Info($"Sending message: {message}, length of which is {message.Length}");
+
         await TcpSendAsync(stream, message, log);
+
+        // for testing, only do a few at a time
         if (count-- <= 0) {
             break;
         }
+
     }
 }
 
