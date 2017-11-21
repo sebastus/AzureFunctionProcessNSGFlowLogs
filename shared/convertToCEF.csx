@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-static System.Collections.Generic.IENumerable<string> convertToCEF(string newClientContent, TraceWriter log)
+static System.Collections.Generic.IEnumerable<string> convertToCEF(string newClientContent, TraceWriter log)
 {
     // newClientContent is a json string with records
 
