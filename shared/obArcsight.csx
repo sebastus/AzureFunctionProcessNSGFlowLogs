@@ -12,9 +12,9 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
     string arcsightAddress = getEnvironmentVariable("arcsightAddress");
     string arcsightPort = getEnvironmentVariable("arcsightPort");
 
-    if (logstashAddress.Length == 0)
+    if (arcsightAddress.Length == 0 || arcsightPort.Length == 0)
     {
-        log.Error("Value for arcsightAddress is required.");
+        log.Error("Values for arcsightAddress and arcsightPort are required.");
         return;
     }
 
