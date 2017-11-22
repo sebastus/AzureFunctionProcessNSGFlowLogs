@@ -34,6 +34,7 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
         }
 
     }
+    await stream.FlushAsync();
 }
 
 static async Task TcpSendAsync(NetworkStream stream, string message, TraceWriter log) {

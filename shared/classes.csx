@@ -39,7 +39,7 @@ class NSGFlowLogTuple
         temp += "startTime=" + startTime;
         temp += " src=" + sourceAddress;
         temp += " dst=" + destinationAddress;
-        temp += " sourcePort=" + sourcePort;
+        temp += " spt=" + sourcePort;
         temp += " dpt=" + destinationPort;
         temp += " proto=" + transportProtocol;
         temp += " deviceDirection=" + (deviceDirection=="I" ? "0" : "1");
