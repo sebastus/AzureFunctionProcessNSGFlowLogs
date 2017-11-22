@@ -39,7 +39,7 @@ class NSGFlowLogTuple
         temp += "startTime=" + startTime;
         temp += " src=" + sourceAddress;
         temp += " dst=" + destinationAddress;
-        temp += " spt=" + sourcePort;
+        temp += " sourcePort=" + sourcePort;
         temp += " dpt=" + destinationPort;
         temp += " proto=" + transportProtocol;
         temp += " deviceDirection=" + (deviceDirection=="I" ? "0" : "1");
@@ -76,7 +76,7 @@ class NSGFlowLogsOuterFlows
 
 class NSGFlowLogProperties
 {
-    public string Version { get; set; }
+    public float Version { get; set; }
     public NSGFlowLogsOuterFlows[] flows { get; set; }
 }
 
