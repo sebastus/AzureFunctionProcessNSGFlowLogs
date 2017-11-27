@@ -40,10 +40,21 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
 static async Task TcpSendAsync(NetworkStream stream, string message, TraceWriter log) {
 
     try {
-        Byte[] data = System.Text.Encoding.ASCII.GetBytes(message);
+        Byte[] data = AppendCRLF(System.Text.Encoding.ASCII.GetBytes(message));
         await stream.WriteAsync(data, 0, data.Length);
     } catch (Exception ex) {
         log.Error($"Exception sending to ArcSight: {ex.Message}");
     } 
 
 }
+
+static Byte[] AppendCRLF(Byte[] data)
+{
+    var dataLength = data.Length;
+    Byte[] datacrlf = new Byte[dataLength + 2];
+    data.CopyTo(datacrlf, 0);
+    datacrlf[dataLength] = 0x0D;
+    datacrlf[dataLength + 1] = 0x0A;
+    return datacrlf;
+}
+
