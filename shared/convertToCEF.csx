@@ -20,7 +20,7 @@ static System.Collections.Generic.IEnumerable<string> convertToCEF(string newCli
     {
         cefRecordBase += record.MakeCEFTime();
         cefRecordBase += "|Microsoft.Network";
-        cefRecordBase += "|XYZZYSECURITYGROUPS";
+        cefRecordBase += "|NETWORKSECURITYGROUPS";
         cefRecordBase += "|" + record.properties.Version.ToString("0.0");
         cefRecordBase += "|" + record.category;
         cefRecordBase += "|" + record.operationName;

@@ -21,7 +21,7 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
     TcpClient client = new TcpClient(arcsightAddress, Convert.ToInt32(arcsightPort));
     NetworkStream stream = client.GetStream();
 
-    int count = 5;
+    // int count = 5;
     foreach (var message in convertToCEF(newClientContent, log)) {
 
         log.Info($"Sending message: {message}, length of which is {message.Length}");
@@ -29,9 +29,9 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
         await TcpSendAsync(stream, message, log);
 
         // for testing, only do a few at a time
-        if (count-- <= 0) {
-            break;
-        }
+        // if (count-- <= 0) {
+        //     break;
+        // }
 
     }
     await stream.FlushAsync();
