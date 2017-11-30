@@ -22,7 +22,7 @@ public static async Task Run(TimerInfo myTimer, Binder inputQueue, ICollector<Ch
 
     var queue = await inputQueue.BindAsync<CloudQueue>(attributes);
 
-    var messages = await queue.GetMessagesAsync(7);
+    var messages = await queue.GetMessagesAsync(10);
 
     foreach (var message in messages)
     {
