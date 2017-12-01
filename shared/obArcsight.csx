@@ -21,51 +21,44 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
     TcpClient client = new TcpClient(arcsightAddress, Convert.ToInt32(arcsightPort));
     NetworkStream stream = client.GetStream();
 
-    int count = 5;
+    int count = 0;
     Byte[] transmission = new Byte[] {};
     foreach (var message in convertToCEF(newClientContent, log)) {
 
-        transmission = AppendToTransmission(transmission, AppendCRLF(System.Text.Encoding.ASCII.GetBytes(message)));
+        try {
+            transmission = AppendToTransmission(transmission, message);
 
-        // batch up the messages
-        if (count-- == 0) {
-            await TcpSendAsync(stream, transmission, log);
-            count = 5;
-            transmission = new Byte[] {};
+            // batch up the messages
+            if (count++ == 1000) {
+                await stream.WriteAsync(transmission, 0, transmission.Length);
+                count = 0;
+                transmission = new Byte[] {};
+            }
+        } catch (Exception ex) {
+            log.Error($"Exception sending to ArcSight: {ex.Message}");
         }
-
+    }
+    if (count > 0) {
+        try {
+            await stream.WriteAsync(transmission, 0, transmission.Length);
+        } catch (Exception ex) {
+            log.Error($"Exception sending to ArcSight: {ex.Message}");
+        }
     }
     await stream.FlushAsync();
 }
 
-static async Task TcpSendAsync(NetworkStream stream, Byte[] transmission, TraceWriter log) {
-
-    try {
-        await stream.WriteAsync(transmission, 0, transmission.Length);
-    } catch (Exception ex) {
-        log.Error($"Exception sending to ArcSight: {ex.Message}");
-    } 
-
-}
-
-static Byte[] AppendCRLF(Byte[] data)
+static Byte[] AppendToTransmission(Byte[] existingMessages, string appendMessage)
 {
-    var dataLength = data.Length;
-    Byte[] datacrlf = new Byte[dataLength + 2];
-    data.CopyTo(datacrlf, 0);
-    datacrlf[dataLength] = 0x0D;
-    datacrlf[dataLength + 1] = 0x0A;
-    return datacrlf;
-}
+    Byte[] appendMessageBytes = Encoding.ASCII.GetBytes(appendMessage);
+    Byte[] crlf = new Byte[] { 0x0D, 0x0A };
 
-static Byte[] AppendToTransmission(Byte[] existingMessages, Byte[] appendMessage)
-{
-    var dataLength = existingMessages.Length + appendMessage.Length;
-
-    Byte[] newMessages = new Byte[dataLength];
+    Byte[] newMessages = new Byte[existingMessages.Length + appendMessage.Length + 2];
 
     existingMessages.CopyTo(newMessages, 0);
-    appendMessage.CopyTo(newMessages, existingMessages.Length);
-
+    appendMessageBytes.CopyTo(newMessages, existingMessages.Length);
+    crlf.CopyTo(newMessages, existingMessages.Length + appendMessageBytes.Length);
+    
     return newMessages;
 }
+
