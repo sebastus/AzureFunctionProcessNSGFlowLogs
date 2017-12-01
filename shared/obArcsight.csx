@@ -21,27 +21,27 @@ static async Task obArcsight(string newClientContent, TraceWriter log)
     TcpClient client = new TcpClient(arcsightAddress, Convert.ToInt32(arcsightPort));
     NetworkStream stream = client.GetStream();
 
-    // int count = 5;
+    int count = 5;
+    Byte[] transmission = new Byte[] {};
     foreach (var message in convertToCEF(newClientContent, log)) {
 
-        // log.Info($"Sending message: {message}, length of which is {message.Length}");
+        transmission = AppendToTransmission(transmission, AppendCRLF(System.Text.Encoding.ASCII.GetBytes(message)));
 
-        await TcpSendAsync(stream, message, log);
-
-        // for testing, only do a few at a time
-        // if (count-- <= 0) {
-        //     break;
-        // }
+        // batch up the messages
+        if (count-- == 0) {
+            await TcpSendAsync(stream, transmission, log);
+            count = 5;
+            transmission = new Byte[] {};
+        }
 
     }
     await stream.FlushAsync();
 }
 
-static async Task TcpSendAsync(NetworkStream stream, string message, TraceWriter log) {
+static async Task TcpSendAsync(NetworkStream stream, Byte[] transmission, TraceWriter log) {
 
     try {
-        Byte[] data = AppendCRLF(System.Text.Encoding.ASCII.GetBytes(message));
-        await stream.WriteAsync(data, 0, data.Length);
+        await stream.WriteAsync(transmission, 0, transmission.Length);
     } catch (Exception ex) {
         log.Error($"Exception sending to ArcSight: {ex.Message}");
     } 
@@ -58,3 +58,14 @@ static Byte[] AppendCRLF(Byte[] data)
     return datacrlf;
 }
 
+static Byte[] AppendToTransmission(Byte[] existingMessages, Byte[] appendMessage)
+{
+    var dataLength = existingMessages.Length + appendMessage.Length;
+
+    Byte[] newMessages = new Byte[dataLength];
+
+    existingMessages.CopyTo(newMessages, 0);
+    appendMessage.CopyTo(newMessages, existingMessages.Length);
+
+    return newMessages;
+}
