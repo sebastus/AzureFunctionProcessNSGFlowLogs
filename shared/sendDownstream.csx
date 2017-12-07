@@ -1,5 +1,6 @@
 #load "getEnvironmentVariable.csx"
 #load "obLogstash.csx"
+#load "obArcsight.csx"
 
 public static async Task SendMessagesDownstream(string myMessages, TraceWriter log)
 {
@@ -14,6 +15,9 @@ public static async Task SendMessagesDownstream(string myMessages, TraceWriter l
     {
         case "logstash":
             await obLogstash(myMessages, log);
+            break;
+        case "arcsight":
+            await obArcsight(myMessages, log);
             break;
     }
 }

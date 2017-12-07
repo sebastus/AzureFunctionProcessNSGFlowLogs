@@ -1,0 +1,19 @@
+{
+    "disabled": false,
+    "bindings": [
+      {
+        "name": "inputManualMessage",
+        "type": "queueTrigger",
+        "direction": "in",
+        "queueName": "nsgchunksmanual",
+        "connection": "AzureWebJobsStorage"
+      },
+      {
+        "name": "newClientContent",
+        "type": "blob",
+        "path": "transmissions/{queueTrigger}",
+        "connection": "AzureWebJobsStorage",
+        "direction": "in"
+      }
+    ]
+  }

@@ -18,21 +18,28 @@ public class SingleHttpClientInstance
         HttpClient.Timeout = new TimeSpan(0, 1, 0);
     }
 
-    public static async Task<HttpResponseMessage> SendToLogstash(HttpRequestMessage req)
+    public static async Task<HttpResponseMessage> SendToLogstash(HttpRequestMessage req, TraceWriter log)
     {
         HttpResponseMessage response = null;
-
+        var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromMinutes(5);
         try
         {
-            response = await HttpClient.SendAsync(req);
+            response = await httpClient.SendAsync(req);
+        } catch (AggregateException ex)
+        {
+            log.Error("Got AggregateException.");
+            throw ex;
         } catch (TaskCanceledException ex)
         {
-            throw ex;
-        } catch (Exception ex)
-        {
+            log.Error("Got TaskCanceledException.");
             throw ex;
         }
-   
+        catch (Exception ex)
+        {
+            log.Error("Got other exception.");
+            throw ex;
+        }
         return response;
     }
 }
@@ -55,6 +62,8 @@ static async Task obLogstash(string newClientContent, TraceWriter log)
     new System.Net.Security.RemoteCertificateValidationCallback(
         delegate { return true; });
 
+    // log.Info($"newClientContent: {newClientContent}");
+
     var client = new SingleHttpClientInstance();
     var creds = Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes(string.Format("{0}:{1}", logstashHttpUser, logstashHttpPwd)));
     try
@@ -64,7 +73,7 @@ static async Task obLogstash(string newClientContent, TraceWriter log)
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         req.Headers.Add("Authorization", "Basic " + creds);
         req.Content = new StringContent(newClientContent, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await SingleHttpClientInstance.SendToLogstash(req);
+        HttpResponseMessage response = await SingleHttpClientInstance.SendToLogstash(req, log);
         if (response.StatusCode != HttpStatusCode.OK)
         {
             log.Error($"StatusCode from Logstash: {response.StatusCode}, and reason: {response.ReasonPhrase}");

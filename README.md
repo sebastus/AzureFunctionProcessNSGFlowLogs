@@ -8,10 +8,33 @@ To learn more about Azure Network Watcher and Flow Logging, please see:</br>
 
 * [Introduction to flow logging for Network Security Groups](https://docs.microsoft.com/en-us/azure/network-watcher/network-watcher-nsg-flow-logging-overview)
 
-The Function App is comprised of 3 functions:</br>
-* NSGFlowLogs - written in C#, ingests the log data from Azure Blob Storage. No knowledge of C# is needed to use it. There are a couple of configuration settings to input. There is no need to have or know how to use Visual Studio.  
-* ProcessNSGFlowLogsCSharp - written in C#, this function is triggered by receipt of a queue message. Add your own logic to process the messages. In this case, you are a C# developer and have the necessary tools and experience.  
-* ProcessNSGFlowLogsNodejs - written in Node.js, this function is a replica of the previous, but you can use your Node skills and tools to accomplish your desired outcome.  
+The Function App is comprised of 3 functions:  
+1. NSGFlowLogs - this is the single point of entry for flow logs. The function is triggered by changes to blobs as they are written to by network watcher. 
+    Input: "myBlob"
+    Output: "nsgprocessing"
+2. NSGFlowLogsIngestTest - allows the developer to throttle the incoming messages as they move to the next step  
+    Input: Q"nsgprocessing"
+    Output: Q"nsgblocks"
+3. NSGFlowLogsChunkerCSharp - gets messages, breaks them into 100kb chunks
+    Input: Q"nsgprocessing" if running at full speed
+           Q"nsgblocks" if throttled by NSGFlowLogsIngestTest
+    Output: Q"nsgchunks"
+4. NSGFlowLogsTest - allows developer to throttle the flow out to the collector
+    Input: Q"nsgchunks"
+    Output: Q"nsgchunktest"
+5. NSGFlowLogsSendChunk - sends a chunk downstream to the log aggregator
+    Input: Q"nsgchunktest" if throttling output
+           Q"nsgchunks" if not throttling output
+    Output: downstream log aggregator
+
+If throttled on both input and output, the pipeline looks like this:
+
+myBlob -> nsgprocessing -> nsgblocks -> nsgchunks -> nsgchunktest -> downstream log aggregator
+
+If not throttled at all:
+
+myBlob -> nsgprocessing -> nsgchunks -> downstream log aggregator
+
 
 # Installation
 

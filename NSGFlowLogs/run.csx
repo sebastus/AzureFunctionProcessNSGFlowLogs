@@ -14,10 +14,10 @@ using System.Threading;
 
 const int MAXDOWNLOADBYTES = 10240;
 
-//public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, string mac, TraceWriter log)
-public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, TraceWriter log)
+public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, string mac, TraceWriter log)
+//public static async Task Run(CloudBlockBlob myBlob, CloudTable checkpointTable, ICollector<Chunk> outputChunks, string subId, string resourceGroup, string nsgName, string blobYear, string blobMonth, string blobDay, string blobHour, TraceWriter log)
 {
-    string mac = "none";
+//    string mac = "none";
     var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour, mac);
 //    var blobName = new BlobName(subId, resourceGroup, nsgName, blobYear, blobMonth, blobDay, blobHour);
 
